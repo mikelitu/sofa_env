@@ -4,7 +4,7 @@ from scipy.spatial.transform import Rotation as R
 from typing import Callable, Optional, Dict
 from collections import deque
 
-from sofa_env.scenes.multiview_tissue_manipulation.multiview_tissue_manipulation_env import TissueRetractionEnv, ObservationType
+from sofa_env.scenes.multiview_tissue_manipulation.multiview_tissue_manipulation_env import MultiViewTissueInteractionEnv, ObservationType
 from sofa_env.base import RenderMode
 from sofa_env.sofa_templates.visual import set_color
 
@@ -19,7 +19,7 @@ def parametrize_camera_shake_callback(delta_position_limits: Dict, max_delta_ang
     rotation_axis_low = np.array([-1.0] * 3)
     rotation_axis_high = np.array([1.0] * 3)
 
-    def camera_shake_callback(env: TissueRetractionEnv) -> None:
+    def camera_shake_callback(env: MultiViewTissueInteractionEnv) -> None:
 
         camera = env.scene_creation_result["camera"]
 
@@ -49,7 +49,7 @@ def parametrize_random_light_color_callback(min: Optional[np.ndarray] = None, ma
     if max is None:
         max = np.array([1.0, 1.0, 1.0, 1.0])
 
-    def random_light_color_callback(env: TissueRetractionEnv) -> None:
+    def random_light_color_callback(env: MultiViewTissueInteractionEnv) -> None:
         with env._sofa_root_node.PositionalLight.color.writeable() as color:
             color[:] = env.rng.uniform(min, max)
 
@@ -63,7 +63,7 @@ def parametrize_random_light_position_callback(min: Optional[np.ndarray] = None,
     if max is None:
         max = np.array([0.075, 0.09, 0.075])
 
-    def random_light_position_callback(env: TissueRetractionEnv) -> None:
+    def random_light_position_callback(env: MultiViewTissueInteractionEnv) -> None:
         with env._sofa_root_node.PositionalLight.position.writeable() as position:
             position[:] = env.rng.uniform(min, max)
 
@@ -77,7 +77,7 @@ def parametrize_random_object_color_callback(min: Optional[np.ndarray] = None, m
     if max is None:
         max = np.array([1.0, 1.0, 1.0])
 
-    def random_object_color_callback(env: TissueRetractionEnv) -> None:
+    def random_object_color_callback(env: MultiViewTissueInteractionEnv) -> None:
         color = env.rng.uniform(min, max)
         object = env._sofa_root_node.scene.grid_board.OglModel
         set_color(object, color)
@@ -91,7 +91,7 @@ def parametrize_random_object_color_callback(min: Optional[np.ndarray] = None, m
         set_color(object, color)
 
         color = env.rng.uniform(min, max)
-        object = env._sofa_root_node.scene.end_effector.end_effector_main_link.end_effector_main_link_motion_target.visual.OglModel
+        object = env._sofa_root_node.scene.end_effector.end_effector_main_link.end_effector_main_link_physical_body.visual.OglModel
         set_color(object, color)
 
         color = env.rng.uniform(min, max)
@@ -105,7 +105,7 @@ def setup_random_object_texture_callback() -> Callable:
     possible_textures = [path for path in (HERE / Path("meshes/domain_randomization_textures")).iterdir()]
     num_textures = len(possible_textures)
 
-    def random_object_texture_callback(env: TissueRetractionEnv) -> None:
+    def random_object_texture_callback(env: MultiViewTissueInteractionEnv) -> None:
 
         texture = possible_textures[env.rng.choice(num_textures)]
         object = env._sofa_root_node.scene.floor.OglModel
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         random_light_color_callback,
     ]
 
-    env = TissueRetractionEnv(
+    env = MultiViewTissueInteractionEnv(
         observation_type=ObservationType.RGB,
         render_mode=RenderMode.HUMAN,
         image_shape=(600, 600),
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     while True:
 
         start = time.time()
-        obs, reward, done, info = env.step(env.action_space.sample())
+        obs, reward, done, truncated, info = env.step(env.action_space.sample())
         end = time.time()
         fps = 1 / (end - start)
         fps_list.append(fps)

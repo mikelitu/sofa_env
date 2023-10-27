@@ -151,7 +151,7 @@ class PointOfInterest(RigidObject):
             with self.mechanical_object.position.writeable() as pose:
                 pose[0] = self.pose
 
-    def set_color(self, color: Tuple[float, float, float]) -> None:
+    def set_color(self, color: Tuple[float, float, float, float]) -> None:
         set_color(self.visual_model_node.OglModel, color=color)
 
     def is_in_point_of_interest(self, position: np.ndarray) -> bool:

@@ -355,6 +355,7 @@ class PrecisionCuttingEnv(SofaEnv):
             self.tracking_point_indices_on_cutting_path = farthest_point_sampling(
                 points=points_on_cutting_path,
                 num_samples=min(self.num_tracking_points_on_cutting_path, len(points_on_cutting_path)),
+                rng=self.rng
             )
 
             # Retrieve the triangles that are part of the path.
@@ -381,6 +382,7 @@ class PrecisionCuttingEnv(SofaEnv):
             self.tracking_point_indices_off_cutting_path = farthest_point_sampling(
                 points=points_off_cutting_path,
                 num_samples=min(self.num_tracking_points_off_cutting_path, len(points_off_cutting_path)),
+                rng=self.rng
             )
 
         # State and workspace limits
@@ -619,9 +621,9 @@ if __name__ == "__main__":
 
     fps_list = deque(maxlen=100)
     counter = 0
-    episode_length = 50
+    episode_length = 500
     while not done:
-        for _ in range(100):
+        for _ in range(750):
             start = time.perf_counter()
             obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
             done = terminated or truncated

@@ -118,7 +118,7 @@ def add_visual_model(
     return visual_model_node
 
 
-def set_color(ogl_model: Sofa.Core.Object, color: Union[np.ndarray, Tuple[float, float, float]]) -> None:
+def set_color(ogl_model: Sofa.Core.Object, color: Union[np.ndarray, Tuple[float, float, float, float]]) -> None:
     """Sets the color of an ogl model.
 
     Args:

@@ -11,6 +11,8 @@ from typing import Callable, Union, Tuple, Optional, List, Any, Dict
 
 from sofa_env.base import SofaEnv, RenderMode, RenderFramework
 from sofa_env.scenes.multiview_tissue_manipulation.sofa_objects.end_effector import EndEffector, is_in, add_waypoints_to_end_effector
+from sofa_env.sofa_templates.camera import Camera
+from scipy.spatial.transform import Rotation as R
 
 HERE = Path(__file__).resolve().parent
 SCENE_DESCRIPTION_FILE_PATH = HERE / Path("scene_description.py")
@@ -50,7 +52,7 @@ class CollisionPunishmentMode(Enum):
     CONTACTDISTANCE = 1
 
 
-class TissueRetractionEnv(SofaEnv):
+class MultiViewTissueInteractionEnv(SofaEnv):
     """Tissue Retraction Environment
 
     Args:
@@ -290,6 +292,8 @@ class TissueRetractionEnv(SofaEnv):
             self.on_reset_callbacks = on_reset_callbacks
         else:
             self.on_reset_callbacks = []
+        
+        # self.move_camera = self._setup_camera_panning()
 
     def _init_sim(self):
         "Initialise simulation and calculate values for reward scaling."
@@ -298,6 +302,7 @@ class TissueRetractionEnv(SofaEnv):
         self.workspace = self.scene_creation_result["workspace"]
         self.tissue_box = self.scene_creation_result["tissue_box"]
         self.end_effector = self.scene_creation_result["interactive_objects"]["end_effector"]
+        self.camera: Camera = self.scene_creation_result["camera"]
 
         # Scale the distances to an interval of [0, 1]
         self._reward_scaling_factor = 1.0 / np.linalg.norm(self.workspace["high"][:3] - self.workspace["low"][:3])
@@ -310,6 +315,9 @@ class TissueRetractionEnv(SofaEnv):
         """Step function of the environment that applies the action to the simulation and returns observation, reward, done signal, and info."""
 
         maybe_rgb_observation = super().step(action)
+        
+        if "move_camera" in self.__dir__():
+            self.move_camera(self)
 
         observation = self._get_observation(maybe_rgb_observation=maybe_rgb_observation)
         reward = self._get_reward(maybe_rgb_observation)
@@ -317,6 +325,33 @@ class TissueRetractionEnv(SofaEnv):
         info = self._get_info()
 
         return observation, reward, terminated, False, info
+    
+    def _setup_camera_panning(self) -> Callable:
+        """Setup camera panning for the environment."""
+        translation_step = 1e-4
+        rotation_step = 1e-1
+
+        translation_high_axis = np.array([1.] * 3)
+        translation_low_axis = -translation_high_axis
+        rotation_high_axis = np.array([1.] * 3)
+        rotation_low_axis = -rotation_high_axis
+
+        translation_axis = self.rng.uniform(translation_low_axis, translation_high_axis)
+        translation_axis = translation_axis / np.linalg.norm(translation_axis)
+        rotation_axis = self.rng.uniform(rotation_low_axis, rotation_high_axis)
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+
+        def _do_camera_action(env: MultiViewTissueInteractionEnv) -> None:
+            camera_position = env.camera.get_pose()[:3]
+            camera_position += translation_step * translation_axis
+
+            camera_rotation = env.camera.get_pose()[3:]
+            rotation_delta = R.from_rotvec(rotation_step * rotation_axis, degrees=True)
+            new_orientation = rotation_delta * R.from_quat(camera_rotation)
+            new_pose = np.append(camera_position, new_orientation.as_quat(), axis=0)
+            env.camera.set_pose(new_pose)
+            
+        return _do_camera_action
 
     def _scale_discrete_action(self, action: int) -> np.ndarray:
         """Maps action indices to a motion delta."""
@@ -617,6 +652,7 @@ class TissueRetractionEnv(SofaEnv):
         self.end_effector.reset()
         self._initial_tissue_collision_point = np.zeros(3, dtype=np.float32)
         self._collision_is_fresh = False
+        self.move_camera = self._setup_camera_panning()
 
         # Clear the episode info values
         for key in self.episode_info:
@@ -664,7 +700,7 @@ if __name__ == "__main__":
 
     pp = pprint.PrettyPrinter()
 
-    env = TissueRetractionEnv(
+    env = MultiViewTissueInteractionEnv(
         observation_type=ObservationType.RGB,
         action_type=ActionType.CONTINUOUS,
         render_mode=RenderMode.HUMAN,

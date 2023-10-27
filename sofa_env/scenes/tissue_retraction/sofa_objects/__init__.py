@@ -1,2 +1,0 @@
-from sofa_env.scenes.tissue_retraction.sofa_objects.tissue import Tissue, TISSUE_PLUGIN_LIST
-from sofa_env.scenes.tissue_retraction.sofa_objects.end_effector import EndEffector, END_EFFECTOR_PLUGIN_LIST
